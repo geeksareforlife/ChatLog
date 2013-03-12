@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 require_once("sam/php_sam.php");
+require_once("class.log.php");
 
 $sRX = 'topic://nh/irc/rx/nottinghack/';
 $sTX = 'topic://nh/irc/tx/nottinghack/'; 
@@ -16,16 +17,26 @@ $sSub = $oConn->subscribe($sRX . '+/');
 $oLog = "";
 $bLogging = false;
 
-
-
-
-
-/*while (1) {
+while (1) {
 	while ($oMsg = $oConn->receive($sSub, array(SAM_WAIT=>500))) {
 		if ($bLogging) {
 			if ($oMsg->body == "!chatlog end") {
-				$oLog->endLog();
 				$bLogging = false;
+				sendIRC("Logging complete, saving...");
+				if ($oLog->endLog()) {
+					sendIRC("Saved to wiki: " . $oLog->getWikiURL());
+				}
+				else {
+					sendIRC("Unable to save to wiki, please access wikitext here: " . $oLog->getPageURL());
+				}
+				
+				continue;
+			}
+			elseif ($oMsg->body == "!chatlog cancel") {
+				// discard log
+				unset($oLog);
+				$bLogging = false;
+				sendIRC("Logging cancelled");
 				continue;
 			}
 			else {
@@ -45,12 +56,14 @@ $bLogging = false;
 				}
 				$bLogging = true;
 				sendIRC("Logging to " . $oLog->getName());
+				sendIRC("If this page exists, it will be overwritten.  Send !chatlog cancel to end logging without saving.");
 			}
 		}
 	}
-}*/
+}
 
 
+// Debugging
 function msg($sMsg) {
 	echo($sMsg . "\n");
 }
@@ -58,60 +71,10 @@ function msg($sMsg) {
 function sendIRC($sMsg) {
 	global $oConn, $sTX;
 	
-	$oMsg = new SAMMessage($sMsg);
+	$oMsg = new SAMMessage("ChatLog: " . $sMsg);
 	
 	$oConn->send($sTX, $oMsg);
 }
 
 
-class Log {
-	
-	private $_sLogPage;
-	
-	private $_aColours;
-	private $_iColourID;
-	
-	private $_aUserMaps;
-	private $_aIgnoreNames;
-	
-	private $_sLog;
-
-	function __construct($sLogPage = "ChatLog") {
-		
-		$this->_sLogPage = date("Y-m-d") . " " . $sLogPage;
-		
-		$this->_aIgnoreNames = array("nh-holly");
-		
-		$this->_aColours = array("#00C322", "#FF1300", "#3E13AF", "#FFD700", "#CD0074", "#FFAA00", "#9FEE00", "#009999", "#A64B00", "#D8005F");
-		$this->_iColourID = 0;
-		$this->_aUserMaps = array();
-		
-		$this->_sLog = '{| class="wikitable"' . "\n";
-		$this->_sLog .= "!Time!!Name!!Minute\n";
-	}
-	
-	function getName() {
-		return $this->_sLogPage;
-	}
-	
-	function add($sName, $sMsg) {
-		if (!isset($this->_aUserMaps[$sName])) {
-			if ($this->_iColourID < count($this->_aColours)) {
-				$this->_aUserMaps[$sName] = $this->_aColours[$this->_iColourID];
-				$this->_iColourID++;
-			}
-			else {
-				$this->_aUserMaps[$sName] = "000000";
-			}
-		}
-		
-		$this->_sLog .= "|-\n";
-		$this->_sLog .=  '|<span style="color: #AAAAAA">' . date("H:i") . '</span>||<span style="color: ' . $this->_aUserMaps[$sName] . '">' . $sName . '</span>||' . $sMsg . "\n";
-	}
-	
-	function endLog() {
-		$this->_sLog .= "|}\n";
-		msg($this->_sLog);
-	}
-} 
 ?>
