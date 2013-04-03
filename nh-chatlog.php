@@ -18,7 +18,7 @@ $oLog = "";
 $bLogging = false;
 
 while (1) {
-	while ($oMsg = $oConn->receive($sSub, array(SAM_WAIT=>500))) {
+	while ($oMsg = $oConn->receive($sSub, array(SAM_WAIT=>5000))) {
 		if ($bLogging) {
 			if ($oMsg->body == "!chatlog end") {
 				$bLogging = false;
